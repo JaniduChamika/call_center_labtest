@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from '../src/generated/prisma';
+import { LabCategory, LabStatus, PrismaClient, UserRole } from '../src/generated/prisma';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -273,6 +273,104 @@ async function main() {
 
       console.log('✅ Appointments created');
 
+      console.log('🌱 Seeding completed successfully.');
+
+
+      // --- LAB MODULE SEEDING (New) ---
+
+      // 7. Create Laboratories
+      // We create one main lab for bookings to link to (optional in your schema but good practice)
+      const mainLab = await prisma.laboratories.create({
+            data: {
+                  name: "City Central Lab",
+                  city: "Colombo",
+                  address: "123 Main Street, Colombo 03",
+                  contact_number: "0112233445",
+                  email: "info@citylab.lk"
+            }
+      });
+      console.log('✅ Laboratories created');
+
+      // 8. Create Lab Tests
+      // We capture the created tests to link them to bookings later
+      const testUrine = await prisma.labTest.create({
+            data: {
+                  code: 'CP-001',
+                  name: 'Urine Full Report',
+                  category: LabCategory.CLINICAL_PATHOLOGY,
+                  price: 450.00,
+                  preparation: 'Mid-stream urine sample',
+            }
+      });
+
+      const testBlood = await prisma.labTest.create({
+            data: {
+                  code: 'HEM-001',
+                  name: 'Full Blood Count (FBC/CBC)',
+                  category: LabCategory.HEMATOLOGY,
+                  price: 850.00,
+                  turnaround_time: '6 Hours',
+            }
+      });
+
+      const testLipid = await prisma.labTest.create({
+            data: {
+                  code: 'BIO-001',
+                  name: 'Lipid Profile',
+                  category: LabCategory.BIOCHEMISTRY,
+                  price: 1500.00,
+                  preparation: '12-14 hours fasting required',
+            }
+      });
+
+      // Add remaining tests via createMany since we don't strictly need their IDs for the sample bookings below
+      await prisma.labTest.createMany({
+            data: [
+                  { code: 'CP-002', name: 'Stool Analysis', category: LabCategory.CLINICAL_PATHOLOGY, price: 500.00 },
+                  { code: 'HEM-002', name: 'Dengue NS1 Antigen', category: LabCategory.HEMATOLOGY, price: 1800.00, turnaround_time: '2 Hours' },
+                  { code: 'BIO-002', name: 'Liver Function Test (LFT)', category: LabCategory.BIOCHEMISTRY, price: 1200.00 },
+                  { code: 'BIO-003', name: 'Kidney Function Test (KFT)', category: LabCategory.BIOCHEMISTRY, price: 1300.00 },
+                  { code: 'BIO-004', name: 'Fasting Blood Sugar (FBS)', category: LabCategory.BIOCHEMISTRY, price: 400.00, preparation: '8 hours fasting' },
+                  { code: 'MIC-001', name: 'Urine Culture & Sensitivity', category: LabCategory.MICROBIOLOGY, price: 1200.00, turnaround_time: '3 Days' },
+                  { code: 'IMM-001', name: 'Thyroid Profile (TSH, T3, T4)', category: LabCategory.IMMUNOLOGY_SEROLOGY, price: 3500.00 },
+                  { code: 'CYT-001', name: 'Pap Smear', category: LabCategory.CYTOLOGY, price: 1600.00 },
+            ]
+      });
+      console.log('✅ Lab Tests created');
+
+      // 9. Create Dummy Lab Bookings
+      await prisma.labBooking.create({
+            data: {
+                  public_id: 'LAB-DEMO-1',
+                  patient_name: 'Saman Kumara',
+                  patient_phone: '0771112233',
+                  patient_age: 45,
+                  patient_gender: 'Male',
+                  lab_test_id: testLipid.id, // Linking to Lipid Profile created above
+                  booking_date: new Date(), // Today
+                  booking_time: '08:30 AM',
+                  status: LabStatus.PENDING,
+                  notes: 'Patient requested email report',
+                  lab_id: mainLab.lab_id
+            }
+      });
+
+      await prisma.labBooking.create({
+            data: {
+                  public_id: 'LAB-DEMO-2',
+                  patient_name: 'Nimali Perera',
+                  patient_phone: '0712233445',
+                  patient_age: 28,
+                  patient_gender: 'Female',
+                  lab_test_id: testBlood.id, // Linking to Full Blood Count created above
+                  booking_date: new Date(), // Today
+                  booking_time: '09:00 AM',
+                  status: LabStatus.SAMPLE_COLLECTED,
+                  lab_id: mainLab.lab_id
+            }
+      });
+
+      console.log('✅ Lab Bookings created');
       console.log('🌱 Seeding completed successfully.');
 }
 
